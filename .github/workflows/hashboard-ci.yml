@@ -5,56 +5,47 @@ on:
     types: [opened, synchronize]
 
 jobs:
-  wait-for-checks:
+  wait_for_dbt_cloud_status:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Wait for 10 seconds
-      - name: Wait for 10 seconds
-        run: sleep 10
-
-      # Step 2: Print out all checks for the PR
-      - name: Print status info
+      - name: Query GitHub API for Status
+        id: get_status
         run: |
-          PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
-          REPO_FULL_NAME=${{ github.repository }}
+          SHA="${{ github.event.inputs.sha }}"
+          API_URL="https://api.github.com/repos/hashboard-hq/dbt-cloud-check-example/statuses/${SHA}"
 
-          echo "Checks and Statuses for PR #$PR_NUMBER:"
+          # Query the API and loop until the status is not 'pending'
+          while :; do
+            echo "Checking status for SHA: $SHA"
+            response=$(curl -s $API_URL)
+            state=$(echo "$response" | jq -r '.[0].state')
+            if [ "$state" != "pending" ]; then
+              echo "Final state: $state"
+              break
+            fi
+            echo "Status is still pending, waiting..."
+            sleep 10  # Wait before re-checking
+          done
 
-          # Fetch check runs
-          CHECK_RUNS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$REPO_FULL_NAME/pulls/$PR_NUMBER/check-runs")
-
-          # Fetch statuses
-          STATUSES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$REPO_FULL_NAME/commits/${{ github.event.pull_request.head.sha }}/status")
-
-          # Process check runs
-          echo "Check Runs:"
-          CHECK_RUNS_COUNT=$(echo "$CHECK_RUNS" | jq '.total_count')
-          if [ "$CHECK_RUNS_COUNT" = "0" ] || [ "$CHECK_RUNS_COUNT" = "null" ]; then
-            echo "No check runs found."
-          else
-            echo "$CHECK_RUNS" | jq -r '.check_runs[] | "- \(.name): \(.status) (\(.conclusion // "N/A"))"'
+          # If the state is not 'success', exit with error
+          if [ "$state" != "success" ]; then
+            echo "Status is not successful: $state"
+            exit 1
           fi
 
-          echo ""
+          # Extract the job ID from the target URL
+          job_id=$(echo "$response" | jq -r '.[0].target_url' | grep -oP '\d+(?=/$)')
 
-          # Process statuses
-          echo "Status Checks:"
-          STATUS_COUNT=$(echo "$STATUSES" | jq '.total_count')
-          if [ "$STATUS_COUNT" = "0" ] || [ "$STATUS_COUNT" = "null" ]; then
-            echo "No status checks found."
-          else
-            echo "$STATUSES" | jq -r '.statuses[] | "- \(.context): \(.state)"'
-          fi
+          echo "Status is successful, Job ID is: $job_id"
 
-          # If both are empty, show raw responses for debugging
-          if [ "$CHECK_RUNS_COUNT" = "0" ] && [ "$STATUS_COUNT" = "0" ]; then
-            echo ""
-            echo "No checks or statuses found. Raw responses for debugging:"
-            echo "Check Runs API Response:"
-            echo "$CHECK_RUNS" | jq '.'
-            echo ""
-            echo "Statuses API Response:"
-            echo "$STATUSES" | jq '.'
-          fi
+          # Set the job ID as an output for downstream steps
+          echo "::set-output name=JOB_ID::$job_id"
+
+  # Downstream job to use the JOB_ID
+  use_job_id:
+    runs-on: ubuntu-latest
+    needs: wait_for_dbt_cloud_status
+    steps:
+      - name: Use JOB_ID
+        run: |
+          echo "The JOB_ID is ${{ needs.wait_for_dbt_cloud_status.outputs.JOB_ID }}"
