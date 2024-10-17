@@ -13,6 +13,7 @@ jobs:
         run: sleep 10
 
       # Step 2: Print out all checks for the PR
+      - name: Print status info
         run: |
           PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
           REPO_FULL_NAME=${{ github.repository }}
