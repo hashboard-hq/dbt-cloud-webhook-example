@@ -18,7 +18,7 @@ jobs:
           while :; do
             echo "Checking status for SHA: $SHA"
             response=$(curl -s $API_URL)
-            state=$(echo "$response" | jq -r '.[] | [select(.context == "dbt Cloud")][0].state')
+            state=$(echo "$response" | jq -r '[.[] | select(.context == "dbt Cloud")][0].state'
             if [ "$state" != "pending" ]; then
               echo "Final state: $state"
               break
