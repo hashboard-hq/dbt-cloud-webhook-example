@@ -8,32 +8,28 @@ jobs:
   wait-for-checks:
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for checks to complete
-        uses: fountainhead/action-wait-for-check@v1.1.0
-        id: wait-for-checks
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          checkName: dbt Cloud
-          ref: ${{ github.event.pull_request.head.sha }}
-          timeoutSeconds: 3600
+      # Step 1: Wait for 10 seconds
+      - name: Wait for 10 seconds
+        run: sleep 10
 
-      - name: Print check information
-        if: steps.wait-for-check.outputs.conclusion == 'success'
+      # Step 2: Print out all checks for the PR
+      - name: Print all checks on the PR
         uses: actions/github-script@v6
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const { data: checks } = await github.rest.checks.listForRef({
+            const pr = github.context.payload.pull_request;
+            if (!pr) {
+              core.setFailed("This action only works on pull request events.");
+              return;
+            }
+
+            const { data: checks } = await github.checks.listForRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: context.payload.pull_request.head.sha,
+              ref: pr.head.sha
             });
 
-            const targetCheck = checks.check_runs.find(check => check.name === 'dbt Cloud');
-
-            if (targetCheck) {
-              console.log('Check Information:');
-              console.log(JSON.stringify(targetCheck, null, 2));
-            } else {
-              console.log('Target check not found');
-            }
+            console.log("Checks on this PR:");
+            checks.check_runs.forEach(check => {
+              console.log(`${check.name}: ${check.status} - ${check.conclusion}`);
+            });
