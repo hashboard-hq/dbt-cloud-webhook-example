@@ -5,16 +5,15 @@ on:
     types: [opened, synchronize]
 
 jobs:
-  wait_for_dbt_cloud_status:
+  create_hashboard_build:
     runs-on: ubuntu-latest
     steps:
-      - name: Query GitHub API for Status
-        id: get_status
+      - name: Wait for dbt Cloud
+        id: wait_for_dbt_cloud
         run: |
           SHA="${{ github.event.pull_request.head.sha }}"
           API_URL="https://api.github.com/repos/hashboard-hq/dbt-cloud-check-example/statuses/${SHA}"
 
-          # Query the API and loop until the status is not 'pending'
           while :; do
             echo "Checking status for SHA: $SHA"
             response=$(curl -s $API_URL)
@@ -27,35 +26,19 @@ jobs:
             sleep 10  # Wait before re-checking
           done
 
-          # If the state is not 'success', exit with error
           if [ "$state" != "success" ]; then
             echo "Status is not successful: $state"
             exit 1
           fi
-
-          # Extract the job ID from the target URL
           job_id=$(echo "$response" | jq -r '.[0].target_url' | grep -oP '\d+(?=/$)')
-
           echo "Status is successful, Job ID is: $job_id"
-
-          # Set the job ID as an output for downstream steps
           echo "::set-output name=JOB_ID::$job_id"
-
-  # Downstream job to use the JOB_ID
-  use_job_id:
-    runs-on: ubuntu-latest
-    needs: wait_for_dbt_cloud_status
-    steps:
-      - name: Use JOB_ID
-        run: |
-          echo "The JOB_ID is
-
 
       - name: Download manifest
         run: |
           response=$(curl -s -w "\n%{http_code}" --request GET \
                -H "Authorization: Token ${{ secrets.DBT_CLOUD_API_KEY }}" \
-               "https://cloud.getdbt.com/api/v2/accounts/$DBT_ACCOUNT_ID/runs/${{ needs.wait_for_dbt_cloud_status.outputs.JOB_ID }}/artifacts/manifest.json")
+               "https://cloud.getdbt.com/api/v2/accounts/$DBT_ACCOUNT_ID/runs/${{ steps.wait_for_dbt_cloud.outputs.JOB_ID }}/artifacts/manifest.json")
 
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
