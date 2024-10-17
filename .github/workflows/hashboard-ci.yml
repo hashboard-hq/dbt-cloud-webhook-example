@@ -11,7 +11,7 @@ jobs:
       - name: Query GitHub API for Status
         id: get_status
         run: |
-          SHA="${{ github.event.inputs.sha }}"
+          SHA="${{ github.event.pull_request.sha }}"
           API_URL="https://api.github.com/repos/hashboard-hq/dbt-cloud-check-example/statuses/${SHA}"
 
           # Query the API and loop until the status is not 'pending'
