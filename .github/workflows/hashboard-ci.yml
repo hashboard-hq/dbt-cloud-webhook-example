@@ -52,6 +52,7 @@ jobs:
             exit 1
           fi
 
+          mkdir ci_artifacts
           echo "$body" > ci_artifacts/manifest.json
 
       - name: Create Hashboard build
