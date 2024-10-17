@@ -1,8 +1,8 @@
 name: Webhook Triggered Action
 
 on:
-  repository_dispatch:
-    types: [webhook_trigger]
+  pull_request:
+    types: [opened, synchronize]
 
 jobs:
   wait-for-checks:
