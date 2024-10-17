@@ -8,6 +8,13 @@ jobs:
   create_hashboard_build:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Hashboard CLI
+        run: |
+          pip install hashboard-cli
+
       - name: Wait for dbt Cloud
         id: wait_for_dbt_cloud
         timeout-minutes: 1
@@ -54,10 +61,6 @@ jobs:
 
           mkdir ci_artifacts
           echo "$body" > ci_artifacts/manifest.json
-
-      - name: Install Hashboard CLI
-        run: |
-          pip install hashboard-cli
 
       - name: Create Hashboard build
         id: create-hb-build
