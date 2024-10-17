@@ -18,7 +18,7 @@ jobs:
           while :; do
             echo "Checking status for SHA: $SHA"
             response=$(curl -s $API_URL)
-            state=$(echo "$response" | jq -r '.[0].state')
+            state=$(echo "$response" | jq -r '.[] | select(.context == "dbt Cloud") | .[0].state')
             if [ "$state" != "pending" ]; then
               echo "Final state: $state"
               break
@@ -54,6 +54,10 @@ jobs:
 
           mkdir ci_artifacts
           echo "$body" > ci_artifacts/manifest.json
+
+      - name: Install Hashboard CLI
+        run: |
+          pip install hashboard-cli
 
       - name: Create Hashboard build
         id: create-hb-build
