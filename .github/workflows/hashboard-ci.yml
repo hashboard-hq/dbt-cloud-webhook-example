@@ -10,6 +10,7 @@ jobs:
     steps:
       - name: Wait for dbt Cloud
         id: wait_for_dbt_cloud
+        timeout-minutes: 1
         run: |
           SHA="${{ github.event.pull_request.head.sha }}"
           API_URL="https://api.github.com/repos/hashboard-hq/dbt-cloud-check-example/statuses/${SHA}"
@@ -35,6 +36,8 @@ jobs:
           echo "::set-output name=JOB_ID::$job_id"
 
       - name: Download manifest
+        env:
+          DBT_ACCOUNT_ID: 21999
         run: |
           response=$(curl -s -w "\n%{http_code}" --request GET \
                -H "Authorization: Token ${{ secrets.DBT_CLOUD_API_KEY }}" \
