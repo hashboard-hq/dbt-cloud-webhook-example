@@ -48,4 +48,55 @@ jobs:
     steps:
       - name: Use JOB_ID
         run: |
-          echo "The JOB_ID is ${{ needs.wait_for_dbt_cloud_status.outputs.JOB_ID }}"
+          echo "The JOB_ID is
+
+
+      - name: Download manifest
+        run: |
+          response=$(curl -s -w "\n%{http_code}" --request GET \
+               -H "Authorization: Token ${{ secrets.DBT_CLOUD_API_KEY }}" \
+               "https://cloud.getdbt.com/api/v2/accounts/$DBT_ACCOUNT_ID/runs/${{ needs.wait_for_dbt_cloud_status.outputs.JOB_ID }}/artifacts/manifest.json")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          if [ $http_code -ne 200 ]; then
+            echo "Error: Received HTTP status code $http_code when downloading manifest"
+            echo "Response body: $body"
+            exit 1
+          fi
+
+          echo "$body" > ci_artifacts/manifest.json
+
+      - name: Create Hashboard build
+        id: create-hb-build
+        env:
+          HASHBOARD_PROJECT_ID: ${{ secrets.HASHBOARD_PROJECT_ID }}
+          HASHBOARD_ACCESS_KEY_ID: ${{ secrets.HASHBOARD_ACCESS_KEY_ID }}
+          HASHBOARD_SECRET_ACCESS_KEY_TOKEN: ${{ secrets.HASHBOARD_ACCESS_KEY_TOKEN }}
+          HASHBOARD_CLI_BASE_URI: https://demo.hashboard.com
+        run: |
+          hb build  --dbt-artifacts=./ci_artifacts | tee out.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          RESULT=$(cat out.txt | sed 's/`//g')
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "log<<$EOF" >> $GITHUB_OUTPUT
+          echo "$RESULT" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+          echo "exitCode=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+      - uses: actions/github-script@v6
+        name: "Comment on the pull request"
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${{ steps.create-hb-build.outputs.log }}`
+            })
+
+      - id: set-appropriate-exit-code
+        name: "Set exit code"
+        run: exit "${{ steps.create-hb-build.outputs.exitCode }}"
