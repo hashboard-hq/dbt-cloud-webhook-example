@@ -1,0 +1,2 @@
+order_id,item_number,timestamp,customer_id,pizza_shape,pizza_size,pizza_type,pizza_toppings,price,item_price,quantity,payment_method,delivery,type,loyalty_status,discount_code,feedback_rating,delivery_time,preparation_time,allergens,special_request,referral_source,cook_id,location_id
+0,0,2022-10-15 02:18:12,3a6e39d2-d956-58a0-afa7-fb6c35b7f97a,Round,Medium,Custom,[],11.0,11.0,1.0,Online Payment,Yes,Single Order,Silver Member,FIRSTORDER,,47,25,[],Crust well-done,Google,C621,L2

@@ -1,0 +1,14 @@
+version: 2
+
+seeds:
+  - name: campaigns_data
+  - name: customers_data
+  - name: marketing_attribution_data
+  - name: marketing_touchpoints_data
+  - name: sales_data
+    config:
+      column_types:
+        quantity: numeric
+        feedback_rating: numeric
+        price: float64
+        item_price: float64

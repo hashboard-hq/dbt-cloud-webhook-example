@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: generated_sources
+    schema: pizza_bytes
+    tables:
+      - name: campaigns
+      - name: customers
+      - name: marketing_attribution
+      - name: marketing_touchpoints
+      - name: sales_data

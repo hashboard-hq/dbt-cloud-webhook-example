@@ -1,0 +1,23 @@
+name: "retail_example"
+version: "1.0.0"
+config-version: 2
+
+profile: "bigquery"
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  +meta:
+    hashboard-defaults:
+      hbVersion: "1.0"
+      preventUpdatesFromUI: false
+      source:
+        connectionName: BigQuery DBT Testing
+
+dbt-cloud:
+  project-id: 383944
